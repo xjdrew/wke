@@ -298,7 +298,8 @@ func (w WebView) GetClientHandler() *C.wkeClientHandler {
 
 // NewWebView create a new webview
 func NewWebView() WebView {
-	return WebView{v: C.wkeCreateWebView()}
+	v := C.wkeCreateWebView()
+	return WebView{v: v}
 }
 
 // GetWebView find webview by name

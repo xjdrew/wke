@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"image"
 	"image/png"
 	"os"
@@ -28,8 +29,13 @@ func main() {
 		url = "http://example.com"
 	}
 
+	// print wke version
+	fmt.Println(wke.VersionString())
+
 	webView := wke.NewWebView()
 	webView.Resize(1024, 768)
+
+	fmt.Printf("loading url %s ...\n", url)
 	webView.LoadURL(url)
 	for {
 		wke.Update()
@@ -39,7 +45,7 @@ func main() {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	/*hidden scrollbar*/
+	// hidden scrollbar
 	webView.RunJS("document.body.style.overflow='hidden'")
 
 	w := webView.ContentsWidth()
@@ -56,6 +62,8 @@ func main() {
 		},
 	}
 	savePng(webView.Title()+".png", img)
+
+	// fini
 	webView.Destroy()
 	wke.Shutdown()
 }

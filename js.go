@@ -84,6 +84,18 @@ type JsExecState struct {
 	s C.jsExecState
 }
 
+func (e JsExecState) JsArgCount() int {
+	return int(C.jsArgCount(e.s))
+}
+
+func (e JsExecState) JsArgType(argIdx int) JsType {
+	return JsType(C.jsArgType(e.s, C.int(argIdx)))
+}
+
+func (e JsExecState) JsArg(argIdx int) JsValue {
+	return JsValue(C.jsArg(e.s, C.int(argIdx)))
+}
+
 func (e JsExecState) ToInt(v JsValue) int {
 	return int(C.jsToInt(e.s, C.jsValue(v)))
 }
@@ -137,7 +149,12 @@ func (e JsExecState) Call(f JsValue, thisObject JsValue, args []JsValue) JsValue
 }
 
 func (e JsExecState) CallGlobal(f JsValue, args []JsValue) JsValue {
-	v := C.jsCallGlobal(e.s, C.jsValue(f), (*C.jsValue)(&args[0]), C.int(len(args)))
+	var v C.jsValue
+	if len(args) == 0 {
+		v = C.jsCallGlobal(e.s, C.jsValue(f), (*C.jsValue)(nil), 0)
+	} else {
+		v = C.jsCallGlobal(e.s, C.jsValue(f), (*C.jsValue)(&args[0]), C.int(len(args)))
+	}
 	return JsValue(v)
 }
 
