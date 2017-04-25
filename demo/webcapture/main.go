@@ -33,7 +33,7 @@ func main() {
 	fmt.Println(wke.VersionString())
 
 	webView := wke.NewWebView()
-	webView.Resize(1024, 768)
+	webView.SetTransparent(false)
 
 	fmt.Printf("loading url %s ...\n", url)
 	webView.LoadURL(url)
@@ -52,8 +52,8 @@ func main() {
 	h := webView.ContentsHeight()
 	webView.Resize(w, h)
 
-	pixels := webView.Paint(nil)
-	img := &image.RGBA{
+	pixels := webView.PaintNRGBA(nil)
+	img := &image.NRGBA{
 		Pix:    pixels,
 		Stride: w * 4,
 		Rect: image.Rectangle{

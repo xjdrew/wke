@@ -1,6 +1,7 @@
 package wke
 
 import (
+	"time"
 	"unsafe"
 )
 
@@ -142,10 +143,10 @@ func (w WebView) LayoutIfNeeded() {
 	C.wkeLayoutIfNeeded(w.v)
 }
 
-// Paint paints view's content as memory block
+// Paint paints view's content as a RGBA pixel block
 func (w WebView) Paint(b []byte) []byte {
-	width := w.ContentsWidth()
-	height := w.ContentsHeight()
+	width := w.Width()
+	height := w.Height()
 	wanted := width * height * 4
 	if len(b) < wanted {
 		b = make([]byte, wanted)
@@ -154,6 +155,22 @@ func (w WebView) Paint(b []byte) []byte {
 	}
 
 	C.wkePaint(w.v, unsafe.Pointer(&b[0]), 0)
+	return b
+}
+
+// BMP images are stored in BGRA order rather than RGBA order.
+func (w WebView) PaintNRGBA(b []byte) []byte {
+	b = w.Paint(b)
+	// convert from bgra to rgba
+	width := w.Width()
+	height := w.Height()
+	stride := width * 4
+	for y := 0; y != height; y += 1 {
+		p := b[y*stride : y*stride+stride]
+		for i := 0; i < len(p); i += 4 {
+			p[i+0], p[i+2] = p[i+2], p[i+0]
+		}
+	}
 	return b
 }
 
@@ -313,6 +330,11 @@ func GetWebView(name string) WebView {
 // init wke environment
 func init() {
 	C.wkeInit()
+	ticker := time.NewTicker(10 * time.Millisecond)
+	select {
+	case <-ticker.C:
+		// Update()
+	}
 }
 
 func Shutdown() {

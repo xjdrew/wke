@@ -2,8 +2,8 @@
 
 ## build Environment
 
-* OS: windows
-* Go: latest i386 version go
+* OS: Windows
+* Go: go${VERSION}.windows-386(VERSION >= 1.8.1)
 * gcc: Mingw32-gcc
 
 ## Demo
