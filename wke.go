@@ -212,6 +212,10 @@ func (w *WebView) GetRepaintInterval() int {
 	return int(C.wkeGetRepaintInterval(w.v))
 }
 
+func (w *WebView) RepaintIfNeededAfterInterval() bool {
+	return GoBool(C.wkeRepaintIfNeededAfterInterval(w.v))
+}
+
 func (w *WebView) CanGoBack() bool {
 	return GoBool(C.wkeCanGoBack(w.v))
 }

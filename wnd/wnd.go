@@ -1,8 +1,6 @@
 package wnd
 
 import (
-	"image"
-	"log"
 	"time"
 
 	"github.com/lxn/walk"
@@ -27,6 +25,7 @@ type WkeWnd struct {
 
 func NewWkeWnd(parent walk.Container) (*WkeWnd, error) {
 	ww := new(WkeWnd)
+
 	if err := walk.InitWidget(
 		ww,
 		parent,
@@ -39,6 +38,16 @@ func NewWkeWnd(parent walk.Container) (*WkeWnd, error) {
 	ww.webView = wke.NewWebView()
 	ww.done = make(chan struct{})
 
+	ww.MustRegisterProperty("URL", walk.NewProperty(
+		func() interface{} {
+			url := ww.URL()
+			return url
+		},
+		func(v interface{}) error {
+			return ww.SetURL(v.(string))
+		},
+		ww.urlChangedPublisher.Event()))
+
 	go func() {
 		ticker := time.NewTicker(10 * time.Millisecond)
 		for {
@@ -46,22 +55,13 @@ func NewWkeWnd(parent walk.Container) (*WkeWnd, error) {
 			case <-ww.done:
 			case <-ticker.C:
 				if ww.webView.IsDirty() {
-					ww.Invalidate()
+					// trigger WM_PAINT and don't erase background
+					win.InvalidateRect(ww.Handle(), nil, false)
 				}
 			}
 		}
 	}()
-	ww.MustRegisterProperty("URL", walk.NewProperty(
-		func() interface{} {
-			url := ww.URL()
-			log.Println("--- get url:", url)
-			return url
-		},
-		func(v interface{}) error {
-			log.Println("--- set url:", v.(string))
-			return ww.SetURL(v.(string))
-		},
-		ww.urlChangedPublisher.Event()))
+
 	return ww, nil
 }
 
@@ -104,37 +104,23 @@ func (ww *WkeWnd) WebView() *wke.WebView {
 func (ww *WkeWnd) WndProc(hwnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr {
 	switch msg {
 	case win.WM_SIZE, win.WM_SIZING:
-		ww.Invalidate()
+		wbcb := ww.WidgetBase.ClientBounds()
+		ww.webView.Resize(wbcb.Width, wbcb.Height)
 	case win.WM_PAINT:
 		var ps win.PAINTSTRUCT
-		hwnd := ww.Handle()
 		win.BeginPaint(hwnd, &ps)
-		defer win.EndPaint(hwnd, &ps)
-		canvas, err := ww.CreateCanvas()
-		if err != nil {
-			panic(err)
-		}
-		defer canvas.Dispose()
+		win.EndPaint(hwnd, &ps)
+
+		ww.WebView().RepaintIfNeeded()
+		hMemDC := (win.HDC)(ww.webView.GetViewDC())
+
+		hdc := win.GetDC(hwnd)
+		defer win.ReleaseDC(hwnd, hdc)
 
 		r := &ps.RcPaint
-		w := int(r.Right - r.Left)
-		h := int(r.Bottom - r.Top)
+		win.BitBlt(hdc, r.Left, r.Top, r.Right-r.Left, r.Bottom-r.Top,
+			hMemDC, 0, 0, win.SRCCOPY)
 
-		ww.webView.Resize(w, h)
-		pixels := ww.webView.PaintNRGBA(nil)
-		img := &image.NRGBA{
-			Pix:    pixels,
-			Stride: w * 4,
-			Rect: image.Rectangle{
-				Min: image.Point{0, 0},
-				Max: image.Point{w, h},
-			},
-		}
-		if bitmap, err := walk.NewBitmapFromImage(img); err != nil {
-			panic(err)
-		} else {
-			canvas.DrawImage(bitmap, walk.Point{X: int(r.Left), Y: int(r.Top)})
-		}
 	}
 
 	return ww.WidgetBase.WndProc(hwnd, msg, wParam, lParam)
