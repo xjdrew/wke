@@ -35,7 +35,7 @@ func main() {
 			declarative.WkeWnd{
 				AssignTo: &ww,
 				Name:     "ww",
-				URL:      "http://github.com/lxn/walk",
+				URL:      "https://github.com/lxn/walk",
 			},
 		},
 		Functions: map[string]func(args ...interface{}) (interface{}, error){

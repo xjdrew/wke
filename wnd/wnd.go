@@ -2,6 +2,7 @@ package wnd
 
 import (
 	"image"
+	"log"
 	"time"
 
 	"github.com/lxn/walk"
@@ -17,7 +18,7 @@ func init() {
 
 type WkeWnd struct {
 	walk.WidgetBase
-	webView             wke.WebView
+	webView             *wke.WebView
 	urlChangedPublisher walk.EventPublisher
 	url                 string
 	done                chan struct{}
@@ -52,23 +53,25 @@ func NewWkeWnd(parent walk.Container) (*WkeWnd, error) {
 	}()
 	ww.MustRegisterProperty("URL", walk.NewProperty(
 		func() interface{} {
-			return ww.URL()
+			url := ww.URL()
+			log.Println("--- get url:", url)
+			return url
 		},
 		func(v interface{}) error {
+			log.Println("--- set url:", v.(string))
 			return ww.SetURL(v.(string))
 		},
 		ww.urlChangedPublisher.Event()))
 	return ww, nil
 }
 
-func (ww *WkeWnd) URL() string {
-	return ww.url
-}
-
-func (ww *WkeWnd) SetURL(url string) error {
-	ww.url = url
-	ww.webView.LoadURL(url)
-	return nil
+func (ww *WkeWnd) Dispose() {
+	close(ww.done)
+	if ww.webView != nil {
+		ww.webView.Destroy()
+		ww.webView = nil
+	}
+	ww.WidgetBase.Dispose()
 }
 
 func (*WkeWnd) LayoutFlags() walk.LayoutFlags {
@@ -79,16 +82,22 @@ func (*WkeWnd) SizeHint() walk.Size {
 	return walk.Size{100, 100}
 }
 
+func (ww *WkeWnd) URL() string {
+	return ww.url
+}
+
+func (ww *WkeWnd) SetURL(url string) error {
+	ww.url = url
+	ww.webView.LoadURL(url)
+	ww.urlChangedPublisher.Publish()
+	return nil
+}
+
 func (ww *WkeWnd) URLChanged() *walk.Event {
 	return ww.urlChangedPublisher.Event()
 }
 
-func (ww *WkeWnd) Dispose() {
-	close(ww.done)
-	ww.webView.Destroy()
-}
-
-func (ww *WkeWnd) WebView() wke.WebView {
+func (ww *WkeWnd) WebView() *wke.WebView {
 	return ww.webView
 }
 
@@ -104,7 +113,6 @@ func (ww *WkeWnd) WndProc(hwnd win.HWND, msg uint32, wParam, lParam uintptr) uin
 		canvas, err := ww.CreateCanvas()
 		if err != nil {
 			panic(err)
-			break
 		}
 		defer canvas.Dispose()
 

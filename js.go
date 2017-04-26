@@ -8,10 +8,10 @@ import (
 // #include "wke.h"
 import "C"
 
-type JsType int
+type JSType int
 
 const (
-	JSTYPE_NUMBER JsType = iota
+	JSTYPE_NUMBER JSType = iota
 	JSTYPE_STRING
 	JSTYPE_BOOLEAN
 	JSTYPE_OBJECT
@@ -19,195 +19,192 @@ const (
 	JSTYPE_UNDEFINED
 )
 
-type JsValue int64
+type JSValue C.wkeJSValue
 
-func (v JsValue) TypeOf() JsType {
-	return JsType(C.jsTypeOf(C.jsValue(v)))
-}
-
-func (v JsValue) IsNumber() bool {
-	return GoBool(C.jsIsNumber(C.jsValue(v)))
-}
-func (v JsValue) IsString() bool {
-	return GoBool(C.jsIsString(C.jsValue(v)))
-}
-func (v JsValue) IsBoolean() bool {
-	return GoBool(C.jsIsBoolean(C.jsValue(v)))
-}
-func (v JsValue) IsObject() bool {
-	return GoBool(C.jsIsObject(C.jsValue(v)))
-}
-func (v JsValue) IsFunction() bool {
-	return GoBool(C.jsIsFunction(C.jsValue(v)))
-}
-func (v JsValue) IsUndefined() bool {
-	return GoBool(C.jsIsUndefined(C.jsValue(v)))
-}
-func (v JsValue) IsNull() bool {
-	return GoBool(C.jsIsNull(C.jsValue(v)))
-}
-func (v JsValue) IsArray() bool {
-	return GoBool(C.jsIsArray(C.jsValue(v)))
-}
-func (v JsValue) IsTrue() bool {
-	return GoBool(C.jsIsTrue(C.jsValue(v)))
-}
-func (v JsValue) IsFalse() bool {
-	return GoBool(C.jsIsFalse(C.jsValue(v)))
+type JSState struct {
+	s *C.wkeJSState
 }
 
-func JsInt(n int) JsValue {
-	return JsValue(C.jsInt(C.int(n)))
+func (e *JSState) JSArgCount() int {
+	return int(C.wkeJSParamCount(e.s))
 }
 
-func JsFloat(f float64) JsValue {
-	return JsValue(C.jsFloat(C.float(f)))
-}
-func JsBoolean(b bool) JsValue {
-	return JsValue(C.jsBoolean(CBool(b)))
+func (e *JSState) JSArgType(argIdx int) JSType {
+	return JSType(C.wkeJSParamType(e.s, C.int(argIdx)))
 }
 
-func JsUndefined() JsValue {
-	return JsValue(C.jsUndefined())
-}
-func JsNull() JsValue {
-	return JsValue(C.jsNull())
-}
-func JsTrue() JsValue {
-	return JsValue(C.jsTrue())
-}
-func JsFalse() JsValue {
-	return JsValue(C.jsFalse())
+func (e *JSState) JSArg(argIdx int) JSValue {
+	return JSValue(C.wkeJSParam(e.s, C.int(argIdx)))
 }
 
-type JsExecState struct {
-	s C.jsExecState
+// JSTypeOf returns value js type
+func (e *JSState) JSTypeOf(v JSValue) JSType {
+	return JSType(C.wkeJSTypeOf(e.s, C.wkeJSValue(v)))
 }
 
-func (e JsExecState) JsArgCount() int {
-	return int(C.jsArgCount(e.s))
+func (e *JSState) JSIsNumber(v JSValue) bool {
+	return GoBool(C.wkeJSIsNumber(e.s, C.wkeJSValue(v)))
+}
+func (e *JSState) JSIsString(v JSValue) bool {
+	return GoBool(C.wkeJSIsString(e.s, C.wkeJSValue(v)))
+}
+func (e *JSState) JSIsBool(v JSValue) bool {
+	return GoBool(C.wkeJSIsBool(e.s, C.wkeJSValue(v)))
+}
+func (e *JSState) JSIsObject(v JSValue) bool {
+	return GoBool(C.wkeJSIsObject(e.s, C.wkeJSValue(v)))
+}
+func (e *JSState) JSIsFunction(v JSValue) bool {
+	return GoBool(C.wkeJSIsFunction(e.s, C.wkeJSValue(v)))
+}
+func (e *JSState) JSIsUndefined(v JSValue) bool {
+	return GoBool(C.wkeJSIsUndefined(e.s, C.wkeJSValue(v)))
+}
+func (e *JSState) JSIsNull(v JSValue) bool {
+	return GoBool(C.wkeJSIsNull(e.s, C.wkeJSValue(v)))
+}
+func (e *JSState) JSIsArray(v JSValue) bool {
+	return GoBool(C.wkeJSIsArray(e.s, C.wkeJSValue(v)))
+}
+func (e *JSState) JSIsTrue(v JSValue) bool {
+	return GoBool(C.wkeJSIsTrue(e.s, C.wkeJSValue(v)))
+}
+func (e *JSState) JSIsFalse(v JSValue) bool {
+	return GoBool(C.wkeJSIsFalse(e.s, C.wkeJSValue(v)))
 }
 
-func (e JsExecState) JsArgType(argIdx int) JsType {
-	return JsType(C.jsArgType(e.s, C.int(argIdx)))
+func (e *JSState) JSToInt(v JSValue) int {
+	return int(C.wkeJSToInt(e.s, C.wkeJSValue(v)))
 }
 
-func (e JsExecState) JsArg(argIdx int) JsValue {
-	return JsValue(C.jsArg(e.s, C.int(argIdx)))
+func (e *JSState) JSToDouble(v JSValue) float64 {
+	return float64(C.wkeJSToDouble(e.s, C.wkeJSValue(v)))
 }
 
-func (e JsExecState) ToInt(v JsValue) int {
-	return int(C.jsToInt(e.s, C.jsValue(v)))
+func (e *JSState) JSToBoolean(v JSValue) bool {
+	return GoBool(C.wkeJSToBool(e.s, C.wkeJSValue(v)))
 }
 
-func (e JsExecState) ToFloat(v JsValue) float64 {
-	return float64(C.jsToFloat(e.s, C.jsValue(v)))
+func (e *JSState) JSToString(v JSValue) string {
+	return C.GoString((*C.char)(C.wkeJSToTempString(e.s, C.wkeJSValue(v))))
 }
 
-func (e JsExecState) ToBoolean(v JsValue) bool {
-	return GoBool(C.jsToBoolean(e.s, C.jsValue(v)))
+func (e *JSState) JSInt(n int) JSValue {
+	return JSValue(C.wkeJSInt(e.s, C.int(n)))
+}
+func (e *JSState) JSDouble(f float64) JSValue {
+	return JSValue(C.wkeJSDouble(e.s, C.double(f)))
+}
+func (e *JSState) JSBool(b bool) JSValue {
+	return JSValue(C.wkeJSBool(e.s, CBool(b)))
 }
 
-func (e JsExecState) ToString(v JsValue) string {
-	return C.GoString((*C.char)(C.jsToString(e.s, C.jsValue(v))))
+func (e *JSState) JSUndefined() JSValue {
+	return JSValue(C.wkeJSUndefined(e.s))
+}
+func (e *JSState) JSNull() JSValue {
+	return JSValue(C.wkeJSNull(e.s))
+}
+func (e *JSState) JSTrue() JSValue {
+	return JSValue(C.wkeJSTrue(e.s))
+}
+func (e *JSState) JSFalse() JSValue {
+	return JSValue(C.wkeJSFalse(e.s))
 }
 
-func (e JsExecState) JsString(s string) JsValue {
+func (e *JSState) JSString(s string) JSValue {
 	cs := C.CString(s)
-	v := C.jsString(e.s, (*C.utf8)(cs))
+	v := C.wkeJSString(e.s, (*C.utf8)(cs))
 	C.free(unsafe.Pointer(cs))
-	return JsValue(v)
+	return JSValue(v)
 }
 
-func (e JsExecState) JsObject() JsValue {
-	return JsValue(C.jsObject(e.s))
+func (e *JSState) JSEmptyObject() JSValue {
+	return JSValue(C.wkeJSEmptyObject(e.s))
 }
 
-func (e JsExecState) JsArray() JsValue {
-	return JsValue(C.jsArray(e.s))
+func (e *JSState) JSEmptyArray() JSValue {
+	return JSValue(C.wkeJSEmptyArray(e.s))
 }
 
-func (e JsExecState) JsFunction(fn C.jsNativeFunction, argCount uint) JsValue {
-	return JsValue(C.jsFunction(e.s, fn, C.uint(argCount)))
+func (e *JSState) JSGet(object JSValue, prop string) JSValue {
+	cs := C.CString(prop)
+	v := C.wkeJSGet(e.s, C.wkeJSValue(object), cs)
+	C.free(unsafe.Pointer(cs))
+	return JSValue(v)
 }
 
-// JsGlobalObject returns window object
-func (e JsExecState) JsGlobalObject() JsValue {
-	return JsValue(C.jsGlobalObject(e.s))
+func (e *JSState) JSSet(object JSValue, prop string, v JSValue) {
+	cs := C.CString(prop)
+	C.wkeJSSet(e.s, C.wkeJSValue(object), cs, C.wkeJSValue(v))
+	C.free(unsafe.Pointer(cs))
 }
 
-func (e JsExecState) Eval(s string) JsValue {
+func (e *JSState) JSGetAt(object JSValue, index int) JSValue {
+	v := C.wkeJSGetAt(e.s, C.wkeJSValue(object), C.int(index))
+	return JSValue(v)
+}
+
+func (e *JSState) JSSetAt(object JSValue, index int, v JSValue) {
+	C.wkeJSSetAt(e.s, C.wkeJSValue(object), C.int(index), C.wkeJSValue(v))
+}
+
+func (e *JSState) JSGetLength(object JSValue) int {
+	return int(C.wkeJSGetLength(e.s, C.wkeJSValue(object)))
+}
+
+func (e *JSState) JSSetLength(object JSValue, length int) {
+	C.wkeJSSetLength(e.s, C.wkeJSValue(object), C.int(length))
+}
+
+// JSGlobalObject returns window object
+func (e *JSState) JSGlobalObject() JSValue {
+	return JSValue(C.wkeJSGlobalObject(e.s))
+}
+
+// GetWebView returns WebView associated with this JSExecState
+func (e *JSState) GetWebView() *WebView {
+	return &WebView{
+		v: C.wkeJSGetWebView(e.s),
+	}
+}
+
+func (e *JSState) Eval(s string) JSValue {
 	cs := C.CString(s)
-	v := C.jsEval(e.s, (*C.utf8)(cs))
+	v := C.wkeJSEval(e.s, (*C.utf8)(cs))
 	C.free(unsafe.Pointer(cs))
-	return JsValue(v)
+	return JSValue(v)
 }
 
-func (e JsExecState) Call(f JsValue, thisObject JsValue, args []JsValue) JsValue {
-	v := C.jsCall(e.s, C.jsValue(f), C.jsValue(thisObject), (*C.jsValue)(&args[0]), C.int(len(args)))
-	return JsValue(v)
+func (e *JSState) JSCall(f JSValue, thisObject JSValue, args []JSValue) JSValue {
+	v := C.wkeJSCall(e.s, C.wkeJSValue(f), C.wkeJSValue(thisObject), (*C.wkeJSValue)(&args[0]), C.int(len(args)))
+	return JSValue(v)
 }
 
-func (e JsExecState) CallGlobal(f JsValue, args []JsValue) JsValue {
-	var v C.jsValue
+func (e *JSState) JSCallGlobal(f JSValue, args []JSValue) JSValue {
+	var v C.wkeJSValue
 	if len(args) == 0 {
-		v = C.jsCallGlobal(e.s, C.jsValue(f), (*C.jsValue)(nil), 0)
+		v = C.wkeJSCallGlobal(e.s, C.wkeJSValue(f), (*C.wkeJSValue)(nil), 0)
 	} else {
-		v = C.jsCallGlobal(e.s, C.jsValue(f), (*C.jsValue)(&args[0]), C.int(len(args)))
+		v = C.wkeJSCallGlobal(e.s, C.wkeJSValue(f), (*C.wkeJSValue)(&args[0]), C.int(len(args)))
 	}
-	return JsValue(v)
+	return JSValue(v)
 }
 
-func (e JsExecState) JsGet(object JsValue, prop string) JsValue {
+func (e *JSState) JSGetGlobal(prop string) JSValue {
 	cs := C.CString(prop)
-	v := C.jsGet(e.s, C.jsValue(object), cs)
+	v := C.wkeJSGetGlobal(e.s, cs)
 	C.free(unsafe.Pointer(cs))
-	return JsValue(v)
+	return JSValue(v)
 }
 
-func (e JsExecState) JsSet(object JsValue, prop string, v JsValue) {
+func (e *JSState) JSSetGlobal(prop string, v JSValue) {
 	cs := C.CString(prop)
-	C.jsSet(e.s, C.jsValue(object), cs, C.jsValue(v))
-	C.free(unsafe.Pointer(cs))
-}
-
-func (e JsExecState) JsGetGlobal(prop string) JsValue {
-	cs := C.CString(prop)
-	v := C.jsGetGlobal(e.s, cs)
-	C.free(unsafe.Pointer(cs))
-	return JsValue(v)
-}
-
-func (e JsExecState) JsSetGlobal(prop string, v JsValue) {
-	cs := C.CString(prop)
-	C.jsSetGlobal(e.s, cs, C.jsValue(v))
+	C.wkeJSSetGlobal(e.s, cs, C.wkeJSValue(v))
 	C.free(unsafe.Pointer(cs))
 }
 
-func (e JsExecState) JsGetAt(object JsValue, index int) JsValue {
-	v := C.jsGetAt(e.s, C.jsValue(object), C.int(index))
-	return JsValue(v)
-}
-
-func (e JsExecState) JsSetAt(object JsValue, index int, v JsValue) {
-	C.jsSetAt(e.s, C.jsValue(object), C.int(index), C.jsValue(v))
-}
-
-func (e JsExecState) JsGetLength(object JsValue) int {
-	return int(C.jsGetLength(e.s, C.jsValue(object)))
-}
-
-func (e JsExecState) JsSetLength(object JsValue, length int) {
-	C.jsSetLength(e.s, C.jsValue(object), C.int(length))
-}
-
-func (e JsExecState) GetWebView() WebView {
-	return WebView{
-		v: C.jsGetWebView(e.s),
-	}
-}
-
-// JsGC triggers js garbage collect
-func JsGC() {
-	C.jsGC()
+// JSGC triggers js garbage collect
+func JSCollectGarbge() {
+	C.wkeJSCollectGarbge()
 }

@@ -29,17 +29,21 @@ func main() {
 		url = "http://example.com"
 	}
 
+	defer wke.Finalize()
+
 	// print wke version
 	fmt.Println(wke.VersionString())
 
 	webView := wke.NewWebView()
+	defer webView.Destroy()
+	webView.Resize(800, 600)
 	webView.SetTransparent(false)
 
 	fmt.Printf("loading url %s ...\n", url)
 	webView.LoadURL(url)
 	for {
 		wke.Update()
-		if webView.IsLoadComplete() {
+		if webView.IsLoadingCompleted() {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -48,10 +52,8 @@ func main() {
 	// hidden scrollbar
 	webView.RunJS("document.body.style.overflow='hidden'")
 
-	w := webView.ContentsWidth()
-	h := webView.ContentsHeight()
-	webView.Resize(w, h)
-
+	w := webView.Width()
+	h := webView.Height()
 	pixels := webView.PaintNRGBA(nil)
 	img := &image.NRGBA{
 		Pix:    pixels,
@@ -62,8 +64,4 @@ func main() {
 		},
 	}
 	savePng(webView.Title()+".png", img)
-
-	// fini
-	webView.Destroy()
-	wke.Shutdown()
 }

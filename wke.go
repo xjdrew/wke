@@ -1,7 +1,6 @@
 package wke
 
 import (
-	"time"
 	"unsafe"
 )
 
@@ -31,120 +30,139 @@ func CBool(b bool) C.bool {
 }
 
 type WebView struct {
-	v C.wkeWebView
+	v *C.wkeWebView
 }
 
-func (w WebView) Destroy() {
+func (w *WebView) Destroy() {
 	C.wkeDestroyWebView(w.v)
 }
 
-func (w WebView) Name() string {
-	return C.GoString(C.wkeWebViewName(w.v))
+func (w *WebView) Name() string {
+	return C.GoString(C.wkeGetName(w.v))
 }
 
-func (w WebView) SetName(name string) {
+func (w *WebView) SetName(name string) {
 	s := C.CString(name)
-	C.wkeSetWebViewName(w.v, s)
+	C.wkeSetName(w.v, s)
 	C.free(unsafe.Pointer(s))
 }
 
-func (w WebView) IsTransparent() bool {
+func (w *WebView) IsTransparent() bool {
 	b := C.wkeIsTransparent(w.v)
 	return GoBool(b)
 }
 
-func (w WebView) SetTransparent(transparent bool) {
+func (w *WebView) SetTransparent(transparent bool) {
 	C.wkeSetTransparent(w.v, CBool(transparent))
 }
 
-func (w WebView) LoadURL(url string) {
+func (w *WebView) SetUserAgent(agent string) {
+	s := C.CString(agent)
+	C.wkeSetUserAgent(w.v, (*C.utf8)(s))
+	C.free(unsafe.Pointer(s))
+}
+
+func (w *WebView) LoadURL(url string) {
 	s := C.CString(url)
 	C.wkeLoadURL(w.v, (*C.utf8)(s))
 	C.free(unsafe.Pointer(s))
 }
 
-func (w WebView) LoadHTML(html string) {
+func (w *WebView) LoadHTML(html string) {
 	s := C.CString(html)
 	C.wkeLoadHTML(w.v, (*C.utf8)(s))
 	C.free(unsafe.Pointer(s))
 }
 
-func (w WebView) LoadFile(filename string) {
+func (w *WebView) LoadFile(filename string) {
 	s := C.CString(filename)
 	C.wkeLoadHTML(w.v, (*C.utf8)(s))
 	C.free(unsafe.Pointer(s))
 }
 
-func (w WebView) IsLoaded() bool {
-	b := C.wkeIsLoaded(w.v)
+func (w *WebView) Load(path string) {
+	s := C.CString(path)
+	C.wkeLoad(w.v, (*C.utf8)(s))
+	C.free(unsafe.Pointer(s))
+}
+
+/*
+func (w *WebView) IsLoading() bool {
+	b := C.wkeIsLoading(w.v)
+	return GoBool(b)
+}
+*/
+
+func (w *WebView) IsLoadingSucceeded() bool {
+	b := C.wkeIsLoadingSucceeded(w.v)
 	return GoBool(b)
 }
 
-func (w WebView) IsLoadFailed() bool {
-	b := C.wkeIsLoadFailed(w.v)
+func (w *WebView) IsLoadingFailed() bool {
+	b := C.wkeIsLoadingFailed(w.v)
 	return GoBool(b)
 }
 
-func (w WebView) IsLoadComplete() bool {
-	b := C.wkeIsLoadComplete(w.v)
+func (w *WebView) IsLoadingCompleted() bool {
+	b := C.wkeIsLoadingCompleted(w.v)
 	return GoBool(b)
 }
 
-func (w WebView) IsDocumentReady() bool {
+func (w *WebView) IsDocumentReady() bool {
 	b := C.wkeIsDocumentReady(w.v)
 	return GoBool(b)
 }
 
-func (w WebView) StopLoading() {
+func (w *WebView) StopLoading() {
 	C.wkeStopLoading(w.v)
 }
 
-func (w WebView) Reload() {
+func (w *WebView) Reload() {
 	C.wkeReload(w.v)
 }
 
-func (w WebView) Title() string {
-	return C.GoString((*C.char)(C.wkeTitle(w.v)))
+func (w *WebView) Title() string {
+	return C.GoString((*C.char)(C.wkeGetTitle(w.v)))
 }
 
-func (w WebView) Resize(width, height int) {
+func (w *WebView) Resize(width, height int) {
 	C.wkeResize(w.v, C.int(width), C.int(height))
 }
 
-func (w WebView) Width() int {
-	return int(C.wkeWidth(w.v))
+func (w *WebView) Width() int {
+	return int(C.wkeGetWidth(w.v))
 }
 
-func (w WebView) Height() int {
-	return int(C.wkeHeight(w.v))
+func (w *WebView) Height() int {
+	return int(C.wkeGetHeight(w.v))
 }
 
-func (w WebView) ContentsWidth() int {
-	return int(C.wkeContentsWidth(w.v))
+func (w *WebView) ContentsWidth() int {
+	return int(C.wkeGetContentWidth(w.v))
 }
 
-func (w WebView) ContentsHeight() int {
-	return int(C.wkeContentsHeight(w.v))
+func (w *WebView) ContentsHeight() int {
+	return int(C.wkeGetContentHeight(w.v))
 }
 
-func (w WebView) SetDirty(dirty bool) {
+func (w *WebView) SetDirty(dirty bool) {
 	C.wkeSetDirty(w.v, CBool(dirty))
 }
 
-func (w WebView) IsDirty() bool {
+func (w *WebView) IsDirty() bool {
 	return GoBool(C.wkeIsDirty(w.v))
 }
 
-func (w WebView) AddDirtyArea(x, y, width, height int) {
+func (w *WebView) AddDirtyArea(x, y, width, height int) {
 	C.wkeAddDirtyArea(w.v, C.int(x), C.int(y), C.int(width), C.int(height))
 }
 
-func (w WebView) LayoutIfNeeded() {
+func (w *WebView) LayoutIfNeeded() {
 	C.wkeLayoutIfNeeded(w.v)
 }
 
 // Paint paints view's content as a RGBA pixel block
-func (w WebView) Paint(b []byte) []byte {
+func (w *WebView) Paint(b []byte) []byte {
 	width := w.Width()
 	height := w.Height()
 	wanted := width * height * 4
@@ -154,7 +172,10 @@ func (w WebView) Paint(b []byte) []byte {
 		b = b[:wanted]
 	}
 
-	C.wkePaint(w.v, unsafe.Pointer(&b[0]), 0)
+	if len(b) > 0 {
+		C.wkePaint2(w.v, unsafe.Pointer(&b[0]), 0)
+	}
+
 	return b
 }
 
@@ -174,92 +195,113 @@ func (w WebView) PaintNRGBA(b []byte) []byte {
 	return b
 }
 
-func (w WebView) CanGoBack() bool {
+// RepaintIfNeeded repaint webview to low-level hdc if needed
+func (w *WebView) RepaintIfNeeded() bool {
+	return GoBool(C.wkeRepaintIfNeeded(w.v))
+}
+
+func (w *WebView) GetViewDC() unsafe.Pointer {
+	return C.wkeGetViewDC(w.v)
+}
+
+func (w *WebView) SetRepaintInterval(ms int) {
+	C.wkeSetRepaintInterval(w.v, C.int(ms))
+}
+
+func (w *WebView) GetRepaintInterval() int {
+	return int(C.wkeGetRepaintInterval(w.v))
+}
+
+func (w *WebView) CanGoBack() bool {
 	return GoBool(C.wkeCanGoBack(w.v))
 }
 
-func (w WebView) GoBack() bool {
+func (w *WebView) GoBack() bool {
 	return GoBool(C.wkeGoBack(w.v))
 }
 
-func (w WebView) CanGoForward() bool {
+func (w *WebView) CanGoForward() bool {
 	return GoBool(C.wkeCanGoForward(w.v))
 }
 
-func (w WebView) GoForward() bool {
+func (w *WebView) GoForward() bool {
 	return GoBool(C.wkeGoForward(w.v))
 }
 
-func (w WebView) SelectAll() {
-	C.wkeSelectAll(w.v)
+func (w *WebView) EditorSelectAll() {
+	C.wkeEditorSelectAll(w.v)
 }
 
-func (w WebView) Copy() {
-	C.wkeCopy(w.v)
+func (w *WebView) EditorCopy() {
+	C.wkeEditorCopy(w.v)
 }
 
-func (w WebView) Cut() {
-	C.wkeCut(w.v)
+func (w *WebView) EditorCut() {
+	C.wkeEditorCut(w.v)
 }
 
-func (w WebView) Paste() {
-	C.wkePaste(w.v)
+func (w *WebView) EditorPaste() {
+	C.wkeEditorPaste(w.v)
 }
 
-func (w WebView) Delete() {
-	C.wkeDelete(w.v)
+func (w *WebView) EditorDelete() {
+	C.wkeEditorDelete(w.v)
 }
 
-func (w WebView) SetCookieEnabled(enable bool) {
+func (w *WebView) GetCookie() string {
+	return C.GoString((*C.char)(C.wkeGetCookie(w.v)))
+}
+
+func (w *WebView) SetCookieEnabled(enable bool) {
 	C.wkeSetCookieEnabled(w.v, CBool(enable))
 }
 
-func (w WebView) CookieEnabled() bool {
-	return GoBool(C.wkeCookieEnabled(w.v))
+func (w *WebView) IsCookieEnabled() bool {
+	return GoBool(C.wkeIsCookieEnabled(w.v))
 }
 
-func (w WebView) SetMediaVolume(volume float32) {
+func (w *WebView) SetMediaVolume(volume float32) {
 	C.wkeSetMediaVolume(w.v, C.float(volume))
 }
 
-func (w WebView) MediaVolume() float32 {
-	return float32(C.wkeMediaVolume(w.v))
+func (w *WebView) MediaVolume() float32 {
+	return float32(C.wkeGetMediaVolume(w.v))
 }
 
-func (w WebView) MouseEvent(message uint, x, y int, flags uint) bool {
-	return GoBool(C.wkeMouseEvent(w.v, C.uint(message), C.int(x), C.int(y), C.uint(flags)))
+func (w *WebView) FireMouseEvent(message uint, x, y int, flags uint) bool {
+	return GoBool(C.wkeFireMouseEvent(w.v, C.uint(message), C.int(x), C.int(y), C.uint(flags)))
 }
 
-func (w WebView) ContextMenuEvent(x, y int, flags uint) bool {
-	return GoBool(C.wkeContextMenuEvent(w.v, C.int(x), C.int(y), C.uint(flags)))
+func (w *WebView) FireContextMenuEvent(x, y int, flags uint) bool {
+	return GoBool(C.wkeFireContextMenuEvent(w.v, C.int(x), C.int(y), C.uint(flags)))
 }
 
-func (w WebView) MouseWheel(x, y, delta int, flags uint) bool {
-	return GoBool(C.wkeMouseWheel(w.v, C.int(x), C.int(y), C.int(delta), C.uint(flags)))
+func (w *WebView) FireMouseWheelEvent(x, y, delta int, flags uint) bool {
+	return GoBool(C.wkeFireMouseWheelEvent(w.v, C.int(x), C.int(y), C.int(delta), C.uint(flags)))
 }
 
-func (w WebView) KeyUp(keyCode uint, flags uint, systemKey bool) bool {
-	return GoBool(C.wkeKeyUp(w.v, C.uint(keyCode), C.uint(flags), CBool(systemKey)))
+func (w *WebView) FireKeyUpEvent(keyCode uint, flags uint, systemKey bool) bool {
+	return GoBool(C.wkeFireKeyUpEvent(w.v, C.uint(keyCode), C.uint(flags), CBool(systemKey)))
 }
 
-func (w WebView) KeyDown(keyCode uint, flags uint, systemKey bool) bool {
-	return GoBool(C.wkeKeyDown(w.v, C.uint(keyCode), C.uint(flags), CBool(systemKey)))
+func (w *WebView) FireKeyDownEvent(keyCode uint, flags uint, systemKey bool) bool {
+	return GoBool(C.wkeFireKeyDownEvent(w.v, C.uint(keyCode), C.uint(flags), CBool(systemKey)))
 }
 
-func (w WebView) KeyPress(keyCode uint, flags uint, systemKey bool) bool {
-	return GoBool(C.wkeKeyPress(w.v, C.uint(keyCode), C.uint(flags), CBool(systemKey)))
+func (w *WebView) FireKeyPressEvent(keyCode uint, flags uint, systemKey bool) bool {
+	return GoBool(C.wkeFireKeyPressEvent(w.v, C.uint(keyCode), C.uint(flags), CBool(systemKey)))
 }
 
-func (w WebView) Focus() {
-	C.wkeFocus(w.v)
+func (w *WebView) SetFocus() {
+	C.wkeSetFocus(w.v)
 }
 
-func (w WebView) Unfocus() {
-	C.wkeUnfocus(w.v)
+func (w *WebView) KillFocus() {
+	C.wkeKillFocus(w.v)
 }
 
-func (w WebView) GetCaret() Rect {
-	rect := C.wkeGetCaret(w.v)
+func (w *WebView) GetCaret() Rect {
+	rect := C.wkeGetCaretRect(w.v)
 	return Rect{
 		int(rect.x),
 		int(rect.y),
@@ -268,77 +310,64 @@ func (w WebView) GetCaret() Rect {
 	}
 }
 
-func (w WebView) RunJS(script string) JsValue {
+func (w *WebView) RunJS(script string) JSValue {
 	s := C.CString(script)
 	v := C.wkeRunJS(w.v, (*C.utf8)(s))
 	C.free(unsafe.Pointer(s))
-	return JsValue(v)
+	return JSValue(v)
 }
 
-func (w WebView) GlobalExec() JsExecState {
-	return JsExecState{
+func (w *WebView) GlobalExec() *JSState {
+	return &JSState{
 		s: C.wkeGlobalExec(w.v),
 	}
 }
 
-func (w WebView) Sleep() {
+func (w *WebView) Sleep() {
 	C.wkeSleep(w.v)
 }
 
-func (w WebView) Awaken() {
-	C.wkeAwaken(w.v)
+func (w *WebView) Awaken() {
+	C.wkeWake(w.v)
 }
 
-func (w WebView) IsAwake() bool {
+func (w *WebView) IsAwake() bool {
 	return GoBool(C.wkeIsAwake(w.v))
 }
 
-func (w WebView) SetZoomFactor(factor float32) {
+func (w *WebView) SetZoomFactor(factor float32) {
 	C.wkeSetZoomFactor(w.v, C.float(factor))
 }
 
-func (w WebView) ZoomFactor() float32 {
-	return float32(C.wkeZoomFactor(w.v))
+func (w *WebView) ZoomFactor() float32 {
+	return float32(C.wkeGetZoomFactor(w.v))
 }
 
-func (w WebView) SetEditable(editable bool) {
+func (w *WebView) SetEditable(editable bool) {
 	C.wkeSetEditable(w.v, CBool(editable))
 }
 
-func (w WebView) SetClientHandler(handler *C.wkeClientHandler) {
-	C.wkeSetClientHandler(w.v, handler)
-}
-
-func (w WebView) GetClientHandler() *C.wkeClientHandler {
-	return C.wkeGetClientHandler(w.v)
-}
-
 // NewWebView create a new webview
-func NewWebView() WebView {
+func NewWebView() *WebView {
 	v := C.wkeCreateWebView()
-	return WebView{v: v}
+	return &WebView{v: v}
 }
 
 // GetWebView find webview by name
-func GetWebView(name string) WebView {
+func GetWebView(name string) *WebView {
 	s := C.CString(name)
 	v := C.wkeGetWebView(s)
 	C.free(unsafe.Pointer(s))
-	return WebView{v: v}
+	return &WebView{v: v}
 }
 
 // init wke environment
-func init() {
-	C.wkeInit()
-	ticker := time.NewTicker(10 * time.Millisecond)
-	select {
-	case <-ticker.C:
-		// Update()
-	}
+func Initialize() {
+	C.wkeInitialize()
 }
 
-func Shutdown() {
-	C.wkeShutdown()
+func Finalize() {
+	C.wkeFinalize()
 }
 
 func Update() {
@@ -346,9 +375,23 @@ func Update() {
 }
 
 func Version() uint {
-	return uint(C.wkeVersion())
+	return uint(C.wkeGetVersion())
 }
 
 func VersionString() string {
-	return C.GoString((*C.char)(C.wkeVersionString()))
+	return C.GoString((*C.char)(C.wkeGetVersionString()))
+}
+
+func RepaintAllNeeded() bool {
+	return GoBool(C.wkeRepaintAllNeeded())
+}
+
+func RunMessageLoop(b bool) int {
+	cb := CBool(b)
+	return int(C.wkeRunMessageLoop((*C.bool)(&cb)))
+}
+
+// init wke
+func init() {
+	Initialize()
 }

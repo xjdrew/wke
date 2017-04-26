@@ -2,33 +2,38 @@ package wke
 
 import (
 	"sync"
+	"unsafe"
 )
 
 /*
+#include <stdlib.h>
 #include "wke.h"
 
-extern jsValue gogate(jsExecState es);
+extern wkeJSValue  gogate(wkeJSState* es);
 */
 import "C"
 
-type JsBindFunc func(e JsExecState) JsValue
+type JSBindFunc func(e *JSState) JSValue
 
 var mu sync.Mutex
-var jsBindingFunctions map[string]JsBindFunc
+var jsBindingFunctions map[string]JSBindFunc
 
 //export jsNativeCall
-func jsNativeCall(name *C.char, e C.jsExecState) C.jsValue {
+func jsNativeCall(name *C.char, e *C.wkeJSState) C.wkeJSValue {
 	s := C.GoString(name)
 	fn := jsBindingFunctions[s]
-	return C.jsValue(fn(JsExecState{e}))
+	return C.wkeJSValue(fn(&JSState{e}))
 }
 
 func init() {
-	jsBindingFunctions = make(map[string]JsBindFunc)
-	C.jsBindFunction(C.CString("gogate"), C.jsNativeFunction(C.gogate), 0)
+	jsBindingFunctions = make(map[string]JSBindFunc)
+
+	name := C.CString("gogate")
+	defer C.free(unsafe.Pointer(name))
+	C.wkeJSBindFunction(name, C.wkeJSNativeFunction(C.gogate), 1)
 }
 
-func JsBind(name string, fn JsBindFunc) {
+func JSBind(name string, fn JSBindFunc) {
 	mu.Lock()
 	defer mu.Unlock()
 	if _, ok := jsBindingFunctions[name]; ok {
@@ -37,7 +42,7 @@ func JsBind(name string, fn JsBindFunc) {
 	jsBindingFunctions[name] = fn
 }
 
-func JsUnbind(name string, fn JsBindFunc) {
+func JSUnbind(name string, fn JSBindFunc) {
 	mu.Lock()
 	defer mu.Unlock()
 	delete(jsBindingFunctions, name)
