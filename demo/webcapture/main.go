@@ -29,8 +29,8 @@ func main() {
 		url = "http://example.com"
 	}
 
+	wke.Initialize()
 	defer wke.Finalize()
-
 	// print wke version
 	fmt.Println(wke.VersionString())
 

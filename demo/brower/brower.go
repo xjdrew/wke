@@ -19,7 +19,7 @@ func main() {
 
 	MainWindow{
 		Icon:    Bind("'../img/' + icon(ww.URL) + '.ico'"),
-		Title:   "WkeWnd Example",
+		Title:   Bind("ww.Title"),
 		MinSize: Size{800, 600},
 		Layout:  VBox{MarginsZero: true},
 		Children: []Widget{
@@ -35,7 +35,7 @@ func main() {
 			declarative.WkeWnd{
 				AssignTo: &ww,
 				Name:     "ww",
-				URL:      "https://github.com/lxn/walk",
+				URL:      "http://baidu.com",
 			},
 		},
 		Functions: map[string]func(args ...interface{}) (interface{}, error){

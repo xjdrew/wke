@@ -15,35 +15,37 @@ import "C"
 
 type JSBindFunc func(e *JSState) JSValue
 
-var mu sync.Mutex
-var jsBindingFunctions map[string]JSBindFunc
+var nativeFunctions struct {
+	sync.Mutex
+	fs map[string]JSBindFunc
+}
 
-//export jsNativeCall
-func jsNativeCall(name *C.char, e *C.wkeJSState) C.wkeJSValue {
+func JSBind(name string, fn JSBindFunc) {
+	nativeFunctions.Lock()
+	defer nativeFunctions.Unlock()
+	if _, ok := nativeFunctions.fs[name]; ok {
+		panic("repeated bind: " + name)
+	}
+	nativeFunctions.fs[name] = fn
+}
+
+func JSUnbind(name string, fn JSBindFunc) {
+	nativeFunctions.Lock()
+	defer nativeFunctions.Unlock()
+	delete(nativeFunctions.fs, name)
+}
+
+//export goNativeCall
+func goNativeCall(name *C.char, e *C.wkeJSState) C.wkeJSValue {
 	s := C.GoString(name)
-	fn := jsBindingFunctions[s]
+	fn := nativeFunctions.fs[s]
 	return C.wkeJSValue(fn(&JSState{e}))
 }
 
 func init() {
-	jsBindingFunctions = make(map[string]JSBindFunc)
+	nativeFunctions.fs = make(map[string]JSBindFunc)
 
 	name := C.CString("gogate")
 	defer C.free(unsafe.Pointer(name))
 	C.wkeJSBindFunction(name, C.wkeJSNativeFunction(C.gogate), 1)
-}
-
-func JSBind(name string, fn JSBindFunc) {
-	mu.Lock()
-	defer mu.Unlock()
-	if _, ok := jsBindingFunctions[name]; ok {
-		panic("repeated bind: " + name)
-	}
-	jsBindingFunctions[name] = fn
-}
-
-func JSUnbind(name string, fn JSBindFunc) {
-	mu.Lock()
-	defer mu.Unlock()
-	delete(jsBindingFunctions, name)
 }

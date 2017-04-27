@@ -27,7 +27,6 @@
 #   define WKE_SYMBOL __declspec(dllimport)
 #endif
 
-
 #define WKE_CALL _cdecl
 #define WKE_API  WKE_EXTERN_C WKE_SYMBOL
 

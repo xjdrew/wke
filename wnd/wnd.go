@@ -16,11 +16,12 @@ func init() {
 
 type WkeWnd struct {
 	walk.WidgetBase
-	webView             *wke.WebView
-	urlChangedPublisher walk.EventPublisher
-	url                 string
-	done                chan struct{}
-	pixels              []byte
+	webView               *wke.WebView
+	url                   string
+	title                 string
+	urlChangedPublisher   walk.EventPublisher
+	titleChangedPublisher walk.EventPublisher
+	done                  chan struct{}
 }
 
 func NewWkeWnd(parent walk.Container) (*WkeWnd, error) {
@@ -30,13 +31,21 @@ func NewWkeWnd(parent walk.Container) (*WkeWnd, error) {
 		ww,
 		parent,
 		wkeWkeWndWindowClass,
-		win.WS_VISIBLE,
+		win.WS_CHILD|win.WS_VISIBLE|win.WS_TABSTOP,
 		0); err != nil {
 		return nil, err
 	}
 
 	ww.webView = wke.NewWebView()
 	ww.done = make(chan struct{})
+	ww.webView.SetTitleChanged(func(title string) {
+		ww.title = title
+		ww.titleChangedPublisher.Publish()
+	})
+	ww.webView.SetURLChanged(func(url string) {
+		ww.url = url
+		ww.urlChangedPublisher.Publish()
+	})
 
 	ww.MustRegisterProperty("URL", walk.NewProperty(
 		func() interface{} {
@@ -44,12 +53,22 @@ func NewWkeWnd(parent walk.Container) (*WkeWnd, error) {
 			return url
 		},
 		func(v interface{}) error {
-			return ww.SetURL(v.(string))
+			ww.SetURL(v.(string))
+			return nil
 		},
 		ww.urlChangedPublisher.Event()))
 
+	ww.MustRegisterProperty("Title", walk.NewProperty(
+		func() interface{} {
+			url := ww.Title()
+			return url
+		},
+		nil,
+		ww.titleChangedPublisher.Event()))
+
 	go func() {
-		ticker := time.NewTicker(10 * time.Millisecond)
+		// 每秒50帧的频率刷新
+		ticker := time.NewTicker(20 * time.Millisecond)
 		for {
 			select {
 			case <-ww.done:
@@ -79,22 +98,27 @@ func (*WkeWnd) LayoutFlags() walk.LayoutFlags {
 }
 
 func (*WkeWnd) SizeHint() walk.Size {
-	return walk.Size{100, 100}
+	return walk.Size{Width: 100, Height: 100}
 }
 
 func (ww *WkeWnd) URL() string {
 	return ww.url
 }
 
-func (ww *WkeWnd) SetURL(url string) error {
-	ww.url = url
-	ww.webView.LoadURL(url)
-	ww.urlChangedPublisher.Publish()
-	return nil
+func (ww *WkeWnd) SetURL(url string) {
+	ww.webView.Load(url)
+}
+
+func (ww *WkeWnd) Title() string {
+	return ww.title
 }
 
 func (ww *WkeWnd) URLChanged() *walk.Event {
 	return ww.urlChangedPublisher.Event()
+}
+
+func (ww *WkeWnd) TitleChanged() *walk.Event {
+	return ww.titleChangedPublisher.Event()
 }
 
 func (ww *WkeWnd) WebView() *wke.WebView {
@@ -119,8 +143,66 @@ func (ww *WkeWnd) WndProc(hwnd win.HWND, msg uint32, wParam, lParam uintptr) uin
 
 		r := &ps.RcPaint
 		win.BitBlt(hdc, r.Left, r.Top, r.Right-r.Left, r.Bottom-r.Top,
-			hMemDC, 0, 0, win.SRCCOPY)
+			hMemDC, r.Left, r.Top, win.SRCCOPY)
+	case win.WM_GETDLGCODE:
+		// for WM_CHAR
+		// ugly hack: form call win.IsDialogMessage, filter char input
+		return win.DLGC_WANTALLKEYS
+	case win.WM_KEYDOWN:
+		ww.webView.FireKeyDownEvent(uint(wParam), lParamToKeyFlags(lParam), false)
+		return 0
+	case win.WM_KEYUP:
+		ww.webView.FireKeyUpEvent(uint(wParam), lParamToKeyFlags(lParam), false)
+	case win.WM_CHAR:
+		ww.webView.FireKeyPressEvent(uint(wParam), lParamToKeyFlags(lParam), false)
+	case win.WM_LBUTTONDOWN:
+		fallthrough
+	case win.WM_MBUTTONDOWN:
+		fallthrough
+	case win.WM_RBUTTONDOWN:
+		fallthrough
+	case win.WM_LBUTTONDBLCLK:
+		fallthrough
+	case win.WM_MBUTTONDBLCLK:
+		fallthrough
+	case win.WM_RBUTTONDBLCLK:
+		fallthrough
+	case win.WM_LBUTTONUP:
+		fallthrough
+	case win.WM_MBUTTONUP:
+		fallthrough
+	case win.WM_RBUTTONUP:
+		fallthrough
+	case win.WM_MOUSEMOVE:
+		if msg == win.WM_LBUTTONDOWN || msg == win.WM_MBUTTONDOWN || msg == win.WM_RBUTTONDOWN {
+			win.SetFocus(hwnd)
+		}
+		ww.webView.FireMouseEvent(wke.MouseMsg(msg), int(win.GET_X_LPARAM(lParam)), int(win.GET_Y_LPARAM(lParam)), wParamToMouseFlags(wParam))
 
+	case win.WM_MOUSEWHEEL:
+		p := win.POINT{X: win.GET_X_LPARAM(lParam), Y: win.GET_Y_LPARAM(lParam)}
+		win.ScreenToClient(hwnd, &p)
+		ww.webView.FireMouseWheelEvent(int(p.X), int(p.Y), wParamToWheelDelta(wParam), wParamToMouseFlags(wParam))
+
+	case WM_IME_STARTCOMPOSITION:
+		caret := ww.webView.GetCaretRect()
+		var form COMPOSITIONFORM
+		form.Style = CFS_POINT
+		form.CurrentPos.X = caret.X
+		form.CurrentPos.Y = caret.Y + caret.H
+		form.Area.Top = caret.Y
+		form.Area.Bottom = caret.Y + caret.H
+		form.Area.Left = caret.X
+		form.Area.Right = caret.X + caret.W
+
+		hIMC := ImmGetContext(hwnd)
+		ImmSetCompositionWindow(hIMC, &form)
+		ImmReleaseContext(hwnd, hIMC)
+		return 0
+	case win.WM_SETFOCUS:
+		ww.webView.SetFocus()
+	case win.WM_KILLFOCUS:
+		ww.webView.KillFocus()
 	}
 
 	return ww.WidgetBase.WndProc(hwnd, msg, wParam, lParam)

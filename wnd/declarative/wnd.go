@@ -38,9 +38,11 @@ type WkeWnd struct {
 
 	// WebView
 
-	AssignTo     **wnd.WkeWnd
-	OnURLChanged walk.EventHandler
-	URL          Property
+	AssignTo       **wnd.WkeWnd
+	URL            Property
+	Title          Property
+	OnURLChanged   walk.EventHandler
+	OnTitleChanged walk.EventHandler
 }
 
 func (ww WkeWnd) Create(builder *Builder) error {
@@ -54,6 +56,9 @@ func (ww WkeWnd) Create(builder *Builder) error {
 			w.URLChanged().Attach(ww.OnURLChanged)
 		}
 
+		if ww.OnTitleChanged != nil {
+			w.TitleChanged().Attach(ww.OnTitleChanged)
+		}
 		if ww.AssignTo != nil {
 			*ww.AssignTo = w
 		}

@@ -1,16 +1,20 @@
 package wke
 
 import (
+	"sync"
 	"unsafe"
 )
 
+// #cgo LDFLAGS: '--enable-stdcall-fixup'
 // #cgo LDFLAGS: -L${SRCDIR} -lwke
 // # include <stdlib.h>
 // #include "wke.h"
+// extern void titleChangedCallback(wkeWebView* webView, void* param, const wkeString* title);
+// extern void urlChangedCallback(wkeWebView* webView, void* param, const wkeString* url);
 import "C"
 
 type Rect struct {
-	x, y, w, h int
+	X, Y, W, H int32
 }
 
 // GoBool convert C.bool to bool
@@ -27,6 +31,35 @@ func CBool(b bool) C.bool {
 		return 1
 	}
 	return 0
+}
+
+type TitleChangedCallback func(title string)
+type URLChangedCallback func(title string)
+
+var webViewCallbacks struct {
+	sync.Mutex
+	cbs map[*C.wkeWebView]map[string]interface{}
+}
+
+func setWebViewCallback(v *C.wkeWebView, name string, f interface{}) {
+	webViewCallbacks.Lock()
+	defer webViewCallbacks.Unlock()
+	if cb, ok := webViewCallbacks.cbs[v]; ok {
+		cb[name] = f
+	} else {
+		webViewCallbacks.cbs[v] = map[string]interface{}{
+			name: f,
+		}
+	}
+}
+
+func getWebViewCallback(v *C.wkeWebView, name string) interface{} {
+	webViewCallbacks.Lock()
+	defer webViewCallbacks.Unlock()
+	if cb, ok := webViewCallbacks.cbs[v]; ok {
+		return cb[name]
+	}
+	return nil
 }
 
 type WebView struct {
@@ -272,27 +305,27 @@ func (w *WebView) MediaVolume() float32 {
 	return float32(C.wkeGetMediaVolume(w.v))
 }
 
-func (w *WebView) FireMouseEvent(message uint, x, y int, flags uint) bool {
+func (w *WebView) FireMouseEvent(message MouseMsg, x, y int, flags MouseFlags) bool {
 	return GoBool(C.wkeFireMouseEvent(w.v, C.uint(message), C.int(x), C.int(y), C.uint(flags)))
 }
 
-func (w *WebView) FireContextMenuEvent(x, y int, flags uint) bool {
+func (w *WebView) FireContextMenuEvent(x, y int, flags MouseFlags) bool {
 	return GoBool(C.wkeFireContextMenuEvent(w.v, C.int(x), C.int(y), C.uint(flags)))
 }
 
-func (w *WebView) FireMouseWheelEvent(x, y, delta int, flags uint) bool {
+func (w *WebView) FireMouseWheelEvent(x, y, delta int, flags MouseFlags) bool {
 	return GoBool(C.wkeFireMouseWheelEvent(w.v, C.int(x), C.int(y), C.int(delta), C.uint(flags)))
 }
 
-func (w *WebView) FireKeyUpEvent(keyCode uint, flags uint, systemKey bool) bool {
+func (w *WebView) FireKeyUpEvent(keyCode uint, flags KeyFlags, systemKey bool) bool {
 	return GoBool(C.wkeFireKeyUpEvent(w.v, C.uint(keyCode), C.uint(flags), CBool(systemKey)))
 }
 
-func (w *WebView) FireKeyDownEvent(keyCode uint, flags uint, systemKey bool) bool {
+func (w *WebView) FireKeyDownEvent(keyCode uint, flags KeyFlags, systemKey bool) bool {
 	return GoBool(C.wkeFireKeyDownEvent(w.v, C.uint(keyCode), C.uint(flags), CBool(systemKey)))
 }
 
-func (w *WebView) FireKeyPressEvent(keyCode uint, flags uint, systemKey bool) bool {
+func (w *WebView) FireKeyPressEvent(keyCode uint, flags KeyFlags, systemKey bool) bool {
 	return GoBool(C.wkeFireKeyPressEvent(w.v, C.uint(keyCode), C.uint(flags), CBool(systemKey)))
 }
 
@@ -304,13 +337,13 @@ func (w *WebView) KillFocus() {
 	C.wkeKillFocus(w.v)
 }
 
-func (w *WebView) GetCaret() Rect {
+func (w *WebView) GetCaretRect() Rect {
 	rect := C.wkeGetCaretRect(w.v)
 	return Rect{
-		int(rect.x),
-		int(rect.y),
-		int(rect.w),
-		int(rect.h),
+		int32(rect.x),
+		int32(rect.y),
+		int32(rect.w),
+		int32(rect.h),
 	}
 }
 
@@ -349,6 +382,32 @@ func (w *WebView) ZoomFactor() float32 {
 
 func (w *WebView) SetEditable(editable bool) {
 	C.wkeSetEditable(w.v, CBool(editable))
+}
+
+//export goTitleChanged
+func goTitleChanged(v *C.wkeWebView, title *C.char) {
+	f := getWebViewCallback(v, "TitleChanged").(TitleChangedCallback)
+	if f != nil {
+		f(C.GoString(title))
+	}
+}
+
+//export goURLChanged
+func goURLChanged(v *C.wkeWebView, url *C.char) {
+	f := getWebViewCallback(v, "URLChanged").(URLChangedCallback)
+	if f != nil {
+		f(C.GoString(url))
+	}
+}
+
+func (w *WebView) SetTitleChanged(f TitleChangedCallback) {
+	setWebViewCallback(w.v, "TitleChanged", f)
+	C.wkeOnTitleChanged(w.v, C.wkeTitleChangedCallback(C.titleChangedCallback), nil)
+}
+
+func (w *WebView) SetURLChanged(f URLChangedCallback) {
+	setWebViewCallback(w.v, "URLChanged", f)
+	C.wkeOnURLChanged(w.v, C.wkeURLChangedCallback(C.urlChangedCallback), nil)
 }
 
 // NewWebView create a new webview
@@ -398,4 +457,5 @@ func RunMessageLoop(b bool) int {
 // init wke
 func init() {
 	Initialize()
+	webViewCallbacks.cbs = make(map[*C.wkeWebView]map[string]interface{})
 }
