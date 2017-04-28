@@ -72,8 +72,9 @@ func NewWkeWnd(parent walk.Container) (*WkeWnd, error) {
 		for {
 			select {
 			case <-ww.done:
+				break
 			case <-ticker.C:
-				if ww.webView.IsDirty() {
+				if ww.webView != nil && ww.webView.IsDirty() {
 					// trigger WM_PAINT and don't erase background
 					win.InvalidateRect(ww.Handle(), nil, false)
 				}

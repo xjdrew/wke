@@ -6,6 +6,9 @@ import "C"
 type MouseFlags uint
 
 const (
+	DefaultAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36"
+)
+const (
 	MF_LBUTTON MouseFlags = C.WKE_LBUTTON
 	MF_RBUTTON MouseFlags = C.WKE_RBUTTON
 	MF_SHIFT   MouseFlags = C.WKE_SHIFT

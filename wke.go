@@ -413,7 +413,9 @@ func (w *WebView) SetURLChanged(f URLChangedCallback) {
 // NewWebView create a new webview
 func NewWebView() *WebView {
 	v := C.wkeCreateWebView()
-	return &WebView{v: v}
+	w := &WebView{v: v}
+	w.SetUserAgent(DefaultAgent)
+	return w
 }
 
 // GetWebView find webview by name
