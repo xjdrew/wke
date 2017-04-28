@@ -109,7 +109,7 @@ func (w *WebView) LoadHTML(html string) {
 
 func (w *WebView) LoadFile(filename string) {
 	s := C.CString(filename)
-	C.wkeLoadHTML(w.v, (*C.utf8)(s))
+	C.wkeLoadFile(w.v, (*C.utf8)(s))
 	C.free(unsafe.Pointer(s))
 }
 
