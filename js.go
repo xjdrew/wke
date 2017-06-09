@@ -177,7 +177,13 @@ func (e *JSState) Eval(s string) JSValue {
 }
 
 func (e *JSState) JSCall(f JSValue, thisObject JSValue, args []JSValue) JSValue {
-	v := C.wkeJSCall(e.s, C.wkeJSValue(f), C.wkeJSValue(thisObject), (*C.wkeJSValue)(&args[0]), C.int(len(args)))
+	var v C.wkeJSValue
+	if len(args) == 0 {
+		v = C.wkeJSCall(e.s, C.wkeJSValue(f), C.wkeJSValue(thisObject), (*C.wkeJSValue)(nil), 0)
+	} else {
+		v = C.wkeJSCall(e.s, C.wkeJSValue(f), C.wkeJSValue(thisObject), (*C.wkeJSValue)(&args[0]), C.int(len(args)))
+	}
+	// v := C.wkeJSCall(e.s, C.wkeJSValue(f), C.wkeJSValue(thisObject), (*C.wkeJSValue)(&args[0]), C.int(len(args)))
 	return JSValue(v)
 }
 
