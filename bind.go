@@ -3,6 +3,8 @@ package wke
 import (
 	"sync"
 	"unsafe"
+
+	"bitbucket.org/istoneio/golib/islog"
 )
 
 /*
@@ -39,7 +41,12 @@ func JSUnbind(name string, fn JSBindFunc) {
 func goNativeCall(name *C.char, e *C.wkeJSState) C.wkeJSValue {
 	s := C.GoString(name)
 	fn := nativeFunctions.fs[s]
-	return C.wkeJSValue(fn(&JSState{e}))
+	state := &JSState{e}
+	if fn == nil {
+		islog.Errorf("goNativeCall: undefined function %s", s)
+		return C.wkeJSValue(state.JSUndefined())
+	}
+	return C.wkeJSValue(fn(state))
 }
 
 func init() {

@@ -52,6 +52,10 @@ func main() {
 	webView.RunJS("gogate('hello', 'world')")
 	webView.RunJS("gogate('print',gogate('mysum', 5, 6, 7).toString())")
 
+	jst := webView.GlobalExec()
+	jsv := webView.RunJS("gogate('alert', 'world')")
+	fmt.Println(jst.JSIsUndefined(jsv))
+
 	// fini
 	webView.Destroy()
 }

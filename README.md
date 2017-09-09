@@ -5,6 +5,7 @@
 * OS: Windows
 * Go: go${VERSION}.windows-386(VERSION >= 1.8.1)
 * gcc: Mingw32-gcc
+* wke: https://github.com/cexer/wke 
 
 ## Demo
 
