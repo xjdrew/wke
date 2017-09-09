@@ -27,13 +27,18 @@ func main() {
 	fmt.Println("fn return:", es.JSToInt(es.JSCallGlobal(fn, []wke.JSValue{es.JSInt(10)})))
 
 	// js call go function
-	wke.JSBind("hello", func(e *wke.JSState) wke.JSValue {
+	wke.JSBindFunc("hello", func(e *wke.JSState) wke.JSValue {
 		v := e.JSToString(e.JSArg(1))
 		fmt.Println("hello, ", v)
 		return es.JSUndefined()
 	})
 
-	wke.JSBind("mysum", func(e *wke.JSState) wke.JSValue {
+	wke.JSBindRaw("testWrap", func(b bool, i int, d float64, s string) string {
+		fmt.Println("testWrap:", b, i, d, s)
+		return "ok"
+	})
+
+	wke.JSBindFunc("mysum", func(e *wke.JSState) wke.JSValue {
 		count := e.JSArgCount()
 		var r int
 		for i := 1; i < count; i++ {
@@ -43,16 +48,17 @@ func main() {
 		return e.JSInt(r)
 	})
 
-	wke.JSBind("print", func(e *wke.JSState) wke.JSValue {
+	wke.JSBindFunc("print", func(e *wke.JSState) wke.JSValue {
 		s := e.JSToString(e.JSArg(1))
 		fmt.Println("--- jsprint:", s)
 		return e.JSUndefined()
 	})
 
+	jst := webView.GlobalExec()
 	webView.RunJS("gogate('hello', 'world')")
 	webView.RunJS("gogate('print',gogate('mysum', 5, 6, 7).toString())")
+	fmt.Println("testWrap:", jst.JSToString(webView.RunJS("gogate('testWrap', true, 10, 3.1415, 'world')")))
 
-	jst := webView.GlobalExec()
 	jsv := webView.RunJS("gogate('alert', 'world')")
 	fmt.Println(jst.JSIsUndefined(jsv))
 
