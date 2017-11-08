@@ -1,11 +1,10 @@
 package wke
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
 	"unsafe"
-
-	"bitbucket.org/istoneio/golib/islog"
 )
 
 /*
@@ -39,7 +38,7 @@ func (h *JSRawHandler) Handle(e *JSState) JSValue {
 
 	// arg0 is funcation name
 	if typ.NumIn() != e.JSArgCount()-1 {
-		islog.Errorf("gogate: call <%s> with unmatch input arguments: %d != %d", funcName, numIn, e.JSArgCount()-1)
+		fmt.Printf("gogate: call <%s> with unmatch input arguments: %d != %d", funcName, numIn, e.JSArgCount()-1)
 		return e.JSUndefined()
 	}
 
@@ -69,7 +68,7 @@ func (h *JSRawHandler) Handle(e *JSState) JSValue {
 				continue
 			}
 		}
-		islog.Errorf("gogate: funcation <%s> argument %d should be %s", funcName, i, kind)
+		fmt.Printf("gogate: funcation <%s> argument %d should be %s", funcName, i, kind)
 		return e.JSUndefined()
 	}
 
@@ -88,7 +87,7 @@ func (h *JSRawHandler) Handle(e *JSState) JSValue {
 		case reflect.String:
 			return e.JSString(ov.String())
 		default:
-			islog.Errorf("gogate: funcation <%s> output type<%s> is unsupported", funcName, ov.Type().Kind())
+			fmt.Printf("gogate: funcation <%s> output type<%s> is unsupported", funcName, ov.Type().Kind())
 			return e.JSUndefined()
 		}
 	}
@@ -98,18 +97,18 @@ func (h *JSRawHandler) Handle(e *JSState) JSValue {
 func verifyJSRawHandler(fn interface{}) {
 	typ := reflect.TypeOf(fn)
 	if typ.Kind() != reflect.Func {
-		islog.Panic("WrapJSFunc: fn is not a funcation")
+		panic("WrapJSFunc: fn is not a funcation")
 	}
 
 	if typ.NumOut() > 1 {
-		islog.Panic("WrapJSFunc: fn's output parameter count is more than 1")
+		panic("WrapJSFunc: fn's output parameter count is more than 1")
 	}
 
 	for i := 0; i < typ.NumOut(); i++ {
 		out := typ.Out(i)
 		kind := out.Kind()
 		if kind != reflect.Bool && kind != reflect.Int && kind != reflect.Float64 && kind != reflect.String {
-			islog.Panicf("WrapJSFunc: output parameter %d's type<%s> is unsupported", i, kind)
+			panic(fmt.Sprintf("WrapJSFunc: output parameter %d's type<%s> is unsupported", i, kind))
 		}
 	}
 
@@ -117,7 +116,7 @@ func verifyJSRawHandler(fn interface{}) {
 		in := typ.In(i)
 		kind := in.Kind()
 		if kind != reflect.Bool && kind != reflect.Int && kind != reflect.Float64 && kind != reflect.String {
-			islog.Panicf("WrapJSFunc: argument %d's type<%s> is unsupported", i, kind)
+			panic(fmt.Sprintf("WrapJSFunc: argument %d's type<%s> is unsupported", i, kind))
 		}
 	}
 }
@@ -176,7 +175,7 @@ func goNativeCall(name *C.char, e *C.wkeJSState) C.wkeJSValue {
 
 	state := &JSState{e}
 	if handler == nil {
-		islog.Errorf("goNativeCall: undefined function %s", s)
+		fmt.Printf("goNativeCall: undefined function %s", s)
 		return C.wkeJSValue(state.JSUndefined())
 	}
 	return C.wkeJSValue(handler.Handle(state))
